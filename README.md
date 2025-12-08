@@ -1,16 +1,96 @@
-# scms
+# 📘 Smart Classroom Management System (SCMS)
 
-IOT based smart classroom management system.
+A modern **IoT-enabled Flutter + Firebase application** that automates classroom monitoring, student tracking, environmental alerts, and administrative controls.
 
-## Getting Started
+Built using:
 
-This project is a starting point for a Flutter application.
+* **Flutter (Web + Mobile)**
+* **Firebase Authentication**
+* **Cloud Firestore**
+* **Riverpod State Management**
+* **Realtime IoT Sensor Integration**
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🚀 Features
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+* Realtime classroom monitoring
+* Fire, temperature & energy alerts
+* Automatic student presence detection
+* Teacher & student dashboards
+* Admin panel for managing rooms & users
+* Realtime device status display (fan/light)
+* Flutter Web deployment with Firebase Hosting
+
+---
+
+## 📁 Firestore Structure
+
+### **Collection: user**
+
+Stores all students, teachers, and admins.
+
+```json
+{
+  "id": "C233267",
+  "name": "Meherajul",
+  "dept": "CSE",
+  "email": "student@example.com",
+  "utype": "student",  
+  "createdAt": "timestamp"
+}
+```
+
+### **Collection: rooms**
+
+```json
+{
+  "roomId": "cx404",
+  "fire": 0,
+  "temp": 28,
+  "fan": 1,
+  "light": 0,
+  "teacherId": "T102",
+  "students": {
+    "C233267": {}
+  }.
+  humidity:55,
+}
+```
+
+---
+
+## 🧑‍🎓 User Roles
+
+### **Student**
+
+* View dashboard
+* Check current room
+* View alerts
+* Browse rooms
+
+### **Teacher**
+
+* Teacher dashboard
+* Room occupancy
+* Alerts
+
+### **Admin**
+
+* Add Students / Teachers
+* Add Rooms
+* Modify Rooms
+* View all users
+
+---
+
+## 🔥 Alert System Logic
+
+Alerts trigger when:
+
+* `fire == 1` → Fire alert
+* `temp > 40` → Temperature alert
+* Fan/light ON while no teacher or students → Energy alert
+
+---
+
