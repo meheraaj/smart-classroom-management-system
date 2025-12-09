@@ -1,13 +1,15 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/auth_providers.dart';
-
+import '../../providers/course_provider.dart';
 
 const Color kPrimaryBlue = Color(0xFF4285F4);
 const Color kGreenTag = Color(0xFF27AE60);
+const Color kRedTag = Color(0xFFE74C3C);
+
 String oid = '';
+
 class AttendanceListScreen extends ConsumerWidget {
   final String roomId;
 
@@ -17,20 +19,32 @@ class AttendanceListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final attendanceAsync = ref.watch(attendanceProvider(roomId));
     final userAsync = ref.watch(userDataProvider);
+    final courseAsync = ref.watch(courseProvider(roomId));
 
+    // Course Info
+    String courseId = "No Course";
+    String courseName = "No Active Class";
 
+    courseAsync.whenData((course) {
+      if (course != null) {
+        courseId = course.id;
+        courseName = course.name;
+      }
+    });
+
+    // Logged in student
     userAsync.whenData((user) {
       if (user != null && user["utype"] == "student") {
         oid = user['id'];
-      } });
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           color: Colors.black,
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Attendance',
@@ -45,32 +59,104 @@ class AttendanceListScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text("Error: $e")),
         data: (students) {
+
+          // -------------------------------------------------------
+          // SPLIT BY STATUS ONLY (NO TIMESTAMP LOGIC ANYMORE)
+          // -------------------------------------------------------
+          final inStudents = <Map<String, dynamic>>[];
+          final outStudents = <Map<String, dynamic>>[];
+
+          for (var s in students) {
+            final status = s["status"]?.toString().toLowerCase().trim() ?? "in";
+
+            if (status == "out") {
+              outStudents.add(s);
+            } else {
+              inStudents.add(s);
+            }
+          }
+
           return Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 430),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // --- Header ---
-                  _buildHeader(),
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
 
-                  // --- Student List ---
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: students.length,
-                      itemBuilder: (context, index) {
-                        final student = students[index];
+                    _buildHeader(courseId, courseName, inStudents.length),
 
-                        return _buildStudentAttendanceCard(
-                          name: student["name"],
-                          id: student["id"],
-                          time: _formatTime(student["enter"]),
-                        );
+                    // -------------------------------
+                    // SECTION - IN CLASS
+                    // -------------------------------
+                    if (inStudents.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        child: Text(
+                          "Currently In Class",
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold, color: kGreenTag),
+                        ),
+                      ),
 
-                      },
-                    ),
-                  ),
-                ],
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: inStudents.length,
+                        itemBuilder: (context, index) {
+                          final s = inStudents[index];
+                          return _buildStudentCard(
+                            name: s["name"],
+                            id: s["id"],
+                            status: "In",
+                            tagColor: kGreenTag,
+                            highlight: oid.toLowerCase() == s["id"].toLowerCase(),
+                          );
+                        },
+                      ),
+                    ],
+
+                    const SizedBox(height: 15),
+
+                    // -------------------------------
+                    // SECTION - OUT OF CLASS
+                    // -------------------------------
+                    if (outStudents.isNotEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        child: Text(
+                          "Left Class",
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
+                        ),
+                      ),
+
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: outStudents.length,
+                        itemBuilder: (context, index) {
+                          final s = outStudents[index];
+                          return _buildStudentCard(
+                            name: s["name"],
+                            id: s["id"],
+                            status: "Out",
+                            tagColor: kRedTag,
+                            isDimmed: true,
+                            highlight: false,
+                          );
+                        },
+                      ),
+                    ],
+
+                    if (inStudents.isEmpty && outStudents.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 50),
+                        child: Center(child: Text("No attendance records found.")),
+                      ),
+                  ],
+                ),
               ),
             ),
           );
@@ -79,7 +165,10 @@ class AttendanceListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader() {
+  // ---------------------------------------------------------
+  // HEADER UI
+  // ---------------------------------------------------------
+  Widget _buildHeader(String courseId, String courseName, int presentCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
       child: Column(
@@ -87,23 +176,22 @@ class AttendanceListScreen extends ConsumerWidget {
         children: [
           const Text('10:40 AM - 11:30 AM',
               style: TextStyle(fontSize: 14, color: Colors.black54)),
-
           const SizedBox(height: 5),
-          const Text('CSE-3524',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
 
-          const Text('Microprocessor',
-              style: TextStyle(fontSize: 16, color: Colors.black87)),
+          Text(courseId,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          Text(courseName,
+              style: const TextStyle(fontSize: 16, color: Colors.black87)),
           const Text('5AM',
               style: TextStyle(fontSize: 14, color: Colors.black54)),
           const SizedBox(height: 20),
 
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Present:',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('Present: $presentCount',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
               _buildExportButton(),
             ],
           ),
@@ -113,13 +201,9 @@ class AttendanceListScreen extends ConsumerWidget {
     );
   }
 
-  String _formatTime(dynamic timestamp) {
-    if (timestamp == null) return "--";
-    final date = (timestamp as Timestamp).toDate();
-    return "${date.hour}:${date.minute.toString().padLeft(2, "0")}";
-  }
-
-
+  // ---------------------------------------------------------
+  // EXPORT BUTTON
+  // ---------------------------------------------------------
   Widget _buildExportButton() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -134,48 +218,66 @@ class AttendanceListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStudentAttendanceCard({
+  // ---------------------------------------------------------
+  // STUDENT CARD
+  // ---------------------------------------------------------
+  Widget _buildStudentCard({
     required String name,
     required String id,
-    required String time,
+    required String status,
+    required Color tagColor,
+    bool isDimmed = false,
+    bool highlight = false,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDimmed ? Colors.grey.shade100 : Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: id.toLowerCase()==oid.toLowerCase()?Colors.blue:Colors.white),
+        border: Border.all(
+            color: highlight ? Colors.blue : Colors.transparent, width: highlight ? 2 : 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.07),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
+
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // Student info
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name ,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+              Text(name,
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDimmed ? Colors.black54 : Colors.black)),
               const SizedBox(height: 4),
               Text("ID: $id",
-                  style: const TextStyle(
-                      fontSize: 13, color: Colors.black54)),
+                  style: const TextStyle(fontSize: 13, color: Colors.black54)),
             ],
           ),
-          Text(
-            time,
-            style: const TextStyle(
-                fontSize: 14,
-                color: kGreenTag,
-                fontWeight: FontWeight.w600),
-          ),
+
+          // Status tag
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: tagColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: tagColor),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(
+                  color: tagColor, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          )
         ],
       ),
     );

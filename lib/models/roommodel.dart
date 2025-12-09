@@ -10,7 +10,7 @@ class RoomModel {
   final int temp;
   final String teacherId;
   final Map<String, dynamic> students;
-  final DateTime? lastUpdate;
+  final String? lastUpdate;
 
   RoomModel({
     this.id = "",
@@ -36,8 +36,8 @@ class RoomModel {
       teacherId: map["teacherId"] ?? "",
       students: map["students"] ?? {},
       lastUpdate: map["last_update"] != null
-          ? (map["last_update"] as Timestamp).toDate()
-          : null,
+          ? (map["last_update"])
+          : "",
     );
   }
 }

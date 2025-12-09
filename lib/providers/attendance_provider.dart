@@ -1,6 +1,3 @@
-
-
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -19,30 +16,41 @@ StreamProvider.family<List<Map<String, dynamic>>, String>((ref, roomId) {
     List<Map<String, dynamic>> attendanceList = [];
 
     for (var entry in studentsMap.entries) {
-      final studentId = entry.key.toString().toLowerCase();          // e.g. "c233267"
-      final attendData = entry.value;       // { enter: ..., leave: ... }
+      final studentId =
+      entry.key.toString().toLowerCase(); // e.g. "c233267"
+      final attendData = entry.value ?? {};
 
-      // Fetch user info from users/<studentId>
+      final String status =
+      (attendData["status"] ?? "in").toString().trim().toLowerCase();
+
+      final String enter =
+          attendData["enter"]?.toString() ?? "--";
+      final String leave =
+          attendData["leave"]?.toString() ?? "--";
+
+      // Fetch user info
       final querySnapshot = await FirebaseFirestore.instance
           .collection("user")
-          .where("id", isEqualTo: studentId.toLowerCase()) // studentId = C233267 for example
+          .where("id", isEqualTo: studentId)
           .limit(1)
           .get();
 
+      String name = "Unknown";
 
-
-      final userDoc = querySnapshot.docs.first;
-      final data = userDoc.data();
+      if (querySnapshot.docs.isNotEmpty) {
+        final data = querySnapshot.docs.first.data();
+        name = data["name"] ?? "Unknown";
+      }
 
       attendanceList.add({
         "id": studentId,
-        "name": data["name"] ?? "Unknown",
-        "enter": attendData["enter"],
-        "leave": attendData["leave"],
+        "name": name,
+        "status": status, // <<< VERY IMPORTANT
+        "enter": enter,
+        "leave": leave,
       });
     }
 
     return attendanceList;
   });
 });
-
