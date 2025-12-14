@@ -1,5 +1,7 @@
 # 📘 Smart Classroom Management System (SCMS)
 
+# [Live Demo](https://iiuc-scms.web.app/)
+
 A modern **IoT-enabled Flutter + Firebase application** that automates classroom monitoring, student tracking, environmental alerts, and administrative controls.
 
 Built using:
