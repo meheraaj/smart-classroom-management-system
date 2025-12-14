@@ -2,6 +2,10 @@
 
 # [Live Demo](https://iiuc-scms.web.app/)
 
+# Student Demo:
+    Mail     :  C233267@gmail.com
+    Password :  12345678
+
 A modern **IoT-enabled Flutter + Firebase application** that automates classroom monitoring, student tracking, environmental alerts, and administrative controls.
 
 Built using:
