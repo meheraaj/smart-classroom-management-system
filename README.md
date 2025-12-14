@@ -1,4 +1,4 @@
-# 📘 Smart Classroom Management System (SCMS)
+# 📘 IOT based Smart Classroom Management System (SCMS)
 
 # [Live Demo](https://iiuc-scms.web.app/)
 
